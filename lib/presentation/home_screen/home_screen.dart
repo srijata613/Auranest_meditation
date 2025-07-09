@@ -15,6 +15,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   bool _isRefreshing = false;
+  User? _currentUser;
+  final AuthService _authService = AuthService();
 
   // Mock data for daily quote
   final Map<String, dynamic> dailyQuote = {
@@ -86,6 +88,37 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       "isFavorite": true
     }
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _currentUser = user;
+        });
+      }
+    } catch (e) {
+      // Handle error silently, fallback to default greeting
+    }
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    final timeGreeting = hour < 12
+        ? 'Good Morning'
+        : hour < 17
+            ? 'Good Afternoon'
+            : 'Good Evening';
+
+    final userName = _currentUser?.name ?? 'User';
+    return '$timeGreeting, $userName';
+  }
 
   Future<void> _handleRefresh() async {
     setState(() {
@@ -212,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Good Morning, Sarah',
+              _getGreeting(),
               style: AppTheme.lightTheme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),

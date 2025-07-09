@@ -16,6 +16,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
 
   bool _isPasswordVisible = false;
   bool _isTermsAccepted = false;
@@ -125,36 +126,61 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      // Use AuthService to register user
+      final result = await _authService.register(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-      // Mock validation - simulate email already exists error
-      if (_emailController.text.trim().toLowerCase() == 'test@example.com') {
-        throw Exception('Email already exists');
-      }
+      if (result.success) {
+        // Success - trigger haptic feedback and navigate
+        HapticFeedback.lightImpact();
 
-      // Success - trigger haptic feedback and navigate
-      HapticFeedback.lightImpact();
+        if (mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: EdgeInsets.all(4.w),
+            ),
+          );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home-screen');
+          // Navigate to home screen
+          Navigator.pushReplacementNamed(context, '/home-screen');
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.message),
+              backgroundColor: AppTheme.lightTheme.colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: EdgeInsets.all(4.w),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = 'Registration failed. Please try again.';
-
-        if (e.toString().contains('Email already exists')) {
-          errorMessage =
-              'This email is already registered. Please use a different email.';
-        } else if (e.toString().contains('network')) {
-          errorMessage =
-              'Network error. Please check your connection and try again.';
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(errorMessage),
+            content: Text('Registration failed. Please try again.'),
             backgroundColor: AppTheme.lightTheme.colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: EdgeInsets.all(4.w),
           ),
         );
       }

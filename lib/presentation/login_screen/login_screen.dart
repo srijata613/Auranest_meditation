@@ -17,15 +17,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _emailFocusNode = FocusNode();
   final _passwordFocusNode = FocusNode();
+  final _authService = AuthService();
 
   bool _isPasswordVisible = false;
   bool _isLoading = false;
   String? _emailError;
   String? _passwordError;
-
-  // Mock credentials for authentication
-  final String _mockEmail = "user@zenflow.com";
-  final String _mockPassword = "meditation123";
 
   @override
   void dispose() {
@@ -74,25 +71,68 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Use AuthService to authenticate user
+      final result = await _authService.login(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    // Check mock credentials
-    if (_emailController.text.trim() == _mockEmail &&
-        _passwordController.text == _mockPassword) {
-      // Success - provide haptic feedback
-      HapticFeedback.lightImpact();
+      if (result.success) {
+        // Success - provide haptic feedback
+        HapticFeedback.lightImpact();
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home-screen');
+        if (mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.message,
+                style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: EdgeInsets.all(4.w),
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Navigate to home screen
+          Navigator.pushReplacementNamed(context, '/home-screen');
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.message,
+                style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+              backgroundColor: AppTheme.lightTheme.colorScheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              margin: EdgeInsets.all(4.w),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
-    } else {
-      // Show error message
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Invalid credentials. Use: ${_mockEmail} / ${_mockPassword}',
+              'Login failed. Please try again.',
               style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
                 color: Colors.white,
               ),
@@ -106,32 +146,75 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       }
-    }
-
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  void _handleForgotPassword() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Password reset functionality coming soon',
-          style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white,
+  void _handleForgotPassword() async {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please enter your email address to reset password',
+            style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+            ),
           ),
+          backgroundColor: AppTheme.lightTheme.colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(4.w),
         ),
-        backgroundColor: AppTheme.lightTheme.colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      );
+      return;
+    }
+
+    // Check if email exists
+    final emailExists =
+        await _authService.emailExists(_emailController.text.trim());
+
+    if (emailExists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Password reset instructions sent to your email',
+            style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(4.w),
         ),
-        margin: EdgeInsets.all(4.w),
-      ),
-    );
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'No account found with this email address',
+            style: AppTheme.lightTheme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppTheme.lightTheme.colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.all(4.w),
+        ),
+      );
+    }
   }
 
   @override
